@@ -1,8 +1,11 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -14,12 +17,17 @@ public class SplicingGUI {
     JTextField threshold;
     JTextArea textarea;
     JComboBox<Integer> jComboBox;
+    JComboBox<String> dropDownRule;
     List<SpliceObject> spliceObjects = new ArrayList<SpliceObject>();
     private final static String newline = "\n";
     private float thresholdValue;
     private int stepInput;
+    HashMap<String, String[]> patternRegex = new HashMap<String, String[]>();
+    private String rule1;
+    private String rule2;
 
     public SplicingGUI() {
+        initPatternRegex();
         JFrame frame = new JFrame();
         frame.setLayout(new GridLayout(0, 1));
         stringInput = setTextField();
@@ -28,7 +36,8 @@ public class SplicingGUI {
         threshold = setTextField();
         frame.add(createLegend("Threshold", threshold));
         frame.add(createLegendDropDown("Number of Steps"));
-        frame.add(createLegendStaticText("Rules Applied"));
+        frame.add(legendDropDownRule("Rules Applied"));
+        // frame.add(createLegendStaticText("Rules Applied"));
         frame.add(createLegendButton("Execution"));
         JScrollPane scrollPane = createTextArea();
         GridBagConstraints c = new GridBagConstraints();
@@ -40,7 +49,13 @@ public class SplicingGUI {
         frame.setTitle("Splicing GUI");
         frame.setSize(500, 800);
         frame.setVisible(true);
+    }
 
+    private void initPatternRegex() {
+        patternRegex.put("a#d$c#a", new String[] { "ad{1}", "ca{1}" });
+        patternRegex.put("a#l$a#l", new String[] { "a.\\b", "a.\\b" });
+        patternRegex.put("a#l$b#l", new String[] { "a.\\b", "b.\\b" });
+        patternRegex.put("l#a$l#b", new String[] { "\\b.a", "\\b.b" });
     }
 
     private JTextField setTextField() {
@@ -83,10 +98,51 @@ public class SplicingGUI {
         return legendPanel;
     }
 
+    private void setRule(String key) {
+        String[] rules = patternRegex.get(key);
+        rule1 = rules[0];
+        rule2 = rules[1];
+    }
+
+    private JPanel legendDropDownRule(String input) {
+        dropDownRule = new JComboBox<>(convert(patternRegex.keySet()));
+        dropDownRule.setBounds(80, 50, 140, 20);
+        JPanel legendPanel = new JPanel();
+        legendPanel.setBorder(BorderFactory.createTitledBorder(input));
+        legendPanel.setLayout(new GridBagLayout());
+        int anchor = GridBagConstraints.WEST;
+        int fill = GridBagConstraints.HORIZONTAL;
+        int ins = 3;
+        Insets insets = new Insets(ins, ins, ins, 3 * ins);
+        GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1.0, 1.0, anchor, fill, insets, 0, 0);
+        gbc.gridx = 1;
+        gbc.weightx = 0.0;
+        gbc.anchor = GridBagConstraints.EAST;
+        legendPanel.add(dropDownRule, gbc);
+        return legendPanel;
+    }
+
+    public static String[] convert(Set<String> setOfString) {
+
+        // Create String[] of size of setOfString
+        String[] arrayOfString = new String[setOfString.size()];
+
+        // Copy elements from set to string array
+        // using advanced for loop
+        int index = 0;
+        for (String str : setOfString)
+            arrayOfString[index++] = str;
+
+        // return the formed String[]
+        return arrayOfString;
+    }
+
     private JPanel createLegendButton(String input) {
         JButton button = new JButton("Run Submissions");
         button.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent event) {
+                String key = String.valueOf(dropDownRule.getSelectedItem());
+                setRule(key);
                 spliceObjects = new ArrayList<SpliceObject>();
                 String x = String.valueOf(jComboBox.getSelectedItem());
                 stepInput = Integer.parseInt(x);
@@ -122,22 +178,23 @@ public class SplicingGUI {
         return legendPanel;
     }
 
-    private JPanel createLegendStaticText(String input) {
-        JLabel label = new JLabel("a#d$c#a");
-        JPanel legendPanel = new JPanel();
-        legendPanel.setBorder(BorderFactory.createTitledBorder(input));
-        legendPanel.setLayout(new GridBagLayout());
-        int anchor = GridBagConstraints.WEST;
-        int fill = GridBagConstraints.HORIZONTAL;
-        int ins = 3;
-        Insets insets = new Insets(ins, ins, ins, 3 * ins);
-        GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1.0, 1.0, anchor, fill, insets, 0, 0);
-        gbc.gridx = 1;
-        gbc.weightx = 0.0;
-        gbc.anchor = GridBagConstraints.EAST;
-        legendPanel.add(label, gbc);
-        return legendPanel;
-    }
+    // private JPanel createLegendStaticText(String input) {
+    // JLabel label = new JLabel("a#d$c#a");
+    // JPanel legendPanel = new JPanel();
+    // legendPanel.setBorder(BorderFactory.createTitledBorder(input));
+    // legendPanel.setLayout(new GridBagLayout());
+    // int anchor = GridBagConstraints.WEST;
+    // int fill = GridBagConstraints.HORIZONTAL;
+    // int ins = 3;
+    // Insets insets = new Insets(ins, ins, ins, 3 * ins);
+    // GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1.0, 1.0, anchor,
+    // fill, insets, 0, 0);
+    // gbc.gridx = 1;
+    // gbc.weightx = 0.0;
+    // gbc.anchor = GridBagConstraints.EAST;
+    // legendPanel.add(label, gbc);
+    // return legendPanel;
+    // }
 
     private JScrollPane createTextArea() {
         JPanel panel = new JPanel();
@@ -171,7 +228,7 @@ public class SplicingGUI {
         algoCalculate(input2, noInput2, input2, noInput2);
         String displayString = "";
         for (SpliceObject v : spliceObjects) {
-            displayString = displayString + v.getInput() + " " + v.getValue() + " ";
+            displayString = displayString + v.getInput() + " " + String.format("%.04f",v.getValue()) + " ";
         }
         displayOutput(displayString, step);
         if (stepInput > step) {
@@ -207,7 +264,7 @@ public class SplicingGUI {
     }
 
     private boolean isRule1Applied(String input) {
-        final String regexRule1 = "ad{1}";
+        final String regexRule1 = rule1;
         final Pattern pattern = Pattern.compile(regexRule1);
         final Matcher matcher = pattern.matcher(input);
         while (matcher.find()) {
@@ -220,7 +277,7 @@ public class SplicingGUI {
     }
 
     private boolean isRule2Applied(String input) {
-        final String regexRule1 = "ca{1}";
+        final String regexRule1 = rule2;
         final Pattern pattern = Pattern.compile(regexRule1);
         final Matcher matcher = pattern.matcher(input);
         while (matcher.find()) {
@@ -232,7 +289,7 @@ public class SplicingGUI {
     }
 
     private String splitStringInput1(String input) {
-        final String regexRule1 = "ad{1}";
+        final String regexRule1 = rule1;
         final Pattern pattern = Pattern.compile(regexRule1);
         final Matcher matcher = pattern.matcher(input);
         String result = null;
@@ -246,7 +303,7 @@ public class SplicingGUI {
     }
 
     private String splitStringInput2(String input) {
-        final String regexRule1 = "ca{1}";
+        final String regexRule1 = rule2;
         final Pattern pattern = Pattern.compile(regexRule1);
         final Matcher matcher = pattern.matcher(input);
         String result = null;
